@@ -35,10 +35,13 @@ class SquircleIcon extends StatelessWidget {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(borderRadius),
         child: icon != null
-            ? Image(
-                image: icon!,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => _buildFallback(),
+            ? Padding(
+                padding: EdgeInsets.all(size * 0.15), // 15% padding inside the squircle
+                child: Image(
+                  image: icon!,
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) => _buildFallback(),
+                ),
               )
             : _buildFallback(),
       ),
