@@ -7,8 +7,12 @@ import 'package:launcher/src/config/themes/cubit/opacity_cubit.dart';
 import 'package:launcher/src/core/modules/home/views/widgets/lomiri_dock.dart';
 import 'package:launcher/src/helpers/utilities/image_picker.dart';
 import 'package:launcher/src/helpers/utilities/local_storage.dart';
+import 'package:launcher/src/helpers/utilities/system_services.dart';
 import 'package:launcher/src/helpers/widgets/custom_snackbar.dart';
 import 'package:launcher/src/helpers/widgets/success_message.dart';
+import 'package:launcher/src/core/modules/home/views/widgets/app_spread.dart';
+import 'package:launcher/src/core/modules/home/views/widgets/indicators_panel.dart';
+import 'package:launcher/src/config/constants/colors.dart';
 
 class Home extends StatefulWidget {
   static const route = '/';
@@ -24,12 +28,63 @@ class HomeState extends State<Home> {
   final String starterIcon = "assets/images/drawer.png";
 
   String? currentWallpaper;
-  bool isDockVisible = true;
+  bool isDockVisible = false;
 
   @override
   void initState() {
     super.initState();
     loadWallpaper();
+    _initGlobalEdgeService();
+    SystemServices.setMethodCallHandler((call) async {
+      if (call.method == 'openDock') {
+        if (mounted && !isDockVisible) {
+          setState(() {
+            isDockVisible = true;
+          });
+        }
+      }
+    });
+  }
+
+  Future<void> _initGlobalEdgeService() async {
+    final hasPermission = await SystemServices.checkOverlayPermission();
+    if (hasPermission) {
+      SystemServices.startEdgeOverlayService();
+    } else {
+      // Delay to avoid crashing during initial build
+      Future.delayed(const Duration(seconds: 2), () {
+        if (mounted) {
+          _showOverlayPermissionDialog();
+        }
+      });
+    }
+  }
+
+  void _showOverlayPermissionDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1E1E1E),
+        title: const Text("Global Edge Gestures", style: TextStyle(color: Colors.white)),
+        content: const Text(
+          "To pull out the Lomiri Dock even when you are inside another app (like Chrome), Ubuntu Launcher needs the 'Draw over other apps' permission.",
+          style: TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Not Now"),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              SystemServices.requestOverlayPermission();
+            },
+            child: const Text("Settings", style: TextStyle(color: ubuntuOrange)),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> loadWallpaper() async {
@@ -79,17 +134,45 @@ class HomeState extends State<Home> {
                   // Wallpaper Layer
                   GestureDetector(
                     onHorizontalDragUpdate: (details) {
+                      final screenWidth = MediaQuery.of(context).size.width;
+                      
+                      // Right edge swipe (App Spread / Multitasking)
+                      if (details.globalPosition.dx > screenWidth - 50 && details.delta.dx < -10) {
+                        HapticFeedback.mediumImpact();
+                        _openAppSpread(context);
+                      }
+
                       // Reveal dock on swipe from left edge
                       if (details.globalPosition.dx < 50 && details.delta.dx > 10) {
-                        setState(() {
-                          isDockVisible = true;
-                        });
+                        if (!isDockVisible) {
+                          HapticFeedback.lightImpact();
+                          setState(() {
+                            isDockVisible = true;
+                          });
+                        }
                       }
                       // Hide dock on swipe to left
                       if (isDockVisible && details.delta.dx < -10) {
+                        HapticFeedback.lightImpact();
                         setState(() {
                           isDockVisible = false;
                         });
+                      }
+                    },
+                    onVerticalDragUpdate: (details) {
+                      final screenHeight = MediaQuery.of(context).size.height;
+                      
+                      // Swipe down from top to open Indicators Panel
+                      if (details.globalPosition.dy < 50 && details.delta.dy > 10) {
+                        HapticFeedback.mediumImpact();
+                        _openIndicatorsPanel(context);
+                      }
+
+                      // Swipe up from bottom to open App Drawer (Dash)
+                      if (details.globalPosition.dy > screenHeight - 100 && details.delta.dy < -10) {
+                        HapticFeedback.mediumImpact();
+                        opacityCubit.setOpacitySemi();
+                        Navigator.pushNamed(context, '/app-drawer');
                       }
                     },
                     onLongPress: () async {
@@ -178,6 +261,102 @@ class HomeState extends State<Home> {
           ),
         ),
       ),
+    );
+  }
+
+  void _openAppSpread(BuildContext context) async {
+    final hasPermission = await SystemServices.checkUsageStatsPermission();
+    if (!hasPermission) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          backgroundColor: const Color(0xFF1E1E1E),
+          title: const Text("Permission Required", style: TextStyle(color: Colors.white)),
+          content: const Text(
+            "To display the Lomiri App Spread (recent apps), Ubuntu Launcher needs 'Usage Access'. Would you like to grant it now?",
+            style: TextStyle(color: Colors.white70),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Not Now"),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                SystemServices.requestUsageStatsPermission();
+              },
+              child: Text("Settings", style: TextStyle(color: ubuntuOrange)),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: "AppSpread",
+      transitionDuration: const Duration(milliseconds: 300),
+      pageBuilder: (context, animation, secondaryAnimation) {
+        return const AppSpreadView();
+      },
+      transitionBuilder: (context, animation, secondaryAnimation, child) {
+        return SlideTransition(
+          position: Tween(begin: const Offset(1, 0), end: const Offset(0, 0)).animate(animation),
+          child: child,
+        );
+      },
+    );
+  }
+
+  void _openIndicatorsPanel(BuildContext context) async {
+    final hasPermission = await SystemServices.checkNotificationPermission();
+    if (!hasPermission) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          backgroundColor: const Color(0xFF1E1E1E),
+          title: const Text("Notification Access Required", style: TextStyle(color: Colors.white)),
+          content: const Text(
+            "To display the Lomiri Indicators panel, Ubuntu Launcher needs permission to read system notifications.",
+            style: TextStyle(color: Colors.white70),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Not Now"),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                SystemServices.requestNotificationPermission();
+              },
+              child: const Text("Settings", style: TextStyle(color: ubuntuOrange)),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: "IndicatorsPanel",
+      transitionDuration: const Duration(milliseconds: 300),
+      pageBuilder: (context, animation, secondaryAnimation) {
+        return const IndicatorsPanelView();
+      },
+      transitionBuilder: (context, animation, secondaryAnimation, child) {
+        return SlideTransition(
+          position: Tween(begin: const Offset(0, -1), end: const Offset(0, 0)).animate(
+            CurvedAnimation(parent: animation, curve: Curves.easeOutCubic)
+          ),
+          child: child,
+        );
+      },
     );
   }
 }

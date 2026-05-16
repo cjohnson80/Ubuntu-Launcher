@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:launcher/src/blocs/apps_cubit.dart';
 import 'package:launcher/src/config/constants/enums.dart';
 import 'package:launcher/src/config/themes/cubit/opacity_cubit.dart';
+import 'package:launcher/src/helpers/widgets/squircle_icon.dart';
 
 class AppDrawer extends StatefulWidget {
   static const route = '/app-drawer';
@@ -128,69 +129,51 @@ class _AppDrawerState extends State<AppDrawer> {
                               itemCount: filteredApps.length,
                               itemBuilder: (context, index) {
                                 final app = filteredApps[index];
-                                return GestureDetector(
-                                  onTap: () {
-                                    DeviceApps.openApp(app.packageName);
-                                    Navigator.pop(context);
-                                  },
-                                  onLongPress: () {
-                                    DeviceApps.openAppSettings(app.packageName);
-                                  },
-                                  child: TweenAnimationBuilder<double>(
-                                    duration: Duration(milliseconds: 400 + (index * 50)),
-                                    tween: Tween(begin: 0.0, end: 1.0),
-                                    curve: Curves.easeOutBack,
-                                    builder: (context, value, child) {
-                                      return Transform.scale(
-                                        scale: value,
-                                        child: Opacity(
-                                          opacity: value.clamp(0.0, 1.0),
-                                          child: Column(
-                                            children: [
-                                              Expanded(
-                                                child: app is ApplicationWithIcon
-                                                    ? Container(
-                                                        decoration: BoxDecoration(
-                                                          boxShadow: [
-                                                            BoxShadow(
-                                                              color: Colors.black.withValues(alpha: 0.2),
-                                                              blurRadius: 12,
-                                                              spreadRadius: 2,
-                                                            )
-                                                          ],
-                                                        ),
-                                                        child: CircleAvatar(
-                                                          radius: 32,
-                                                          backgroundColor: Colors.white,
-                                                          backgroundImage: MemoryImage(app.icon),
-                                                        ),
-                                                      )
-                                                    : const CircleAvatar(
-                                                        radius: 32,
-                                                        backgroundColor: Colors.white,
-                                                        child: Icon(Icons.apps, color: Colors.black),
-                                                      ),
-                                              ),
-                                              const SizedBox(height: 10),
-                                              Text(
-                                                app.appName,
-                                                textAlign: TextAlign.center,
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                                style: const TextStyle(
-                                                  color: Colors.white,
-                                                  fontSize: 13,
-                                                  fontWeight: FontWeight.w400,
-                                                  letterSpacing: 0.5,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      );
+                                  return GestureDetector(
+                                    onTap: () {
+                                      DeviceApps.openApp(app.packageName);
+                                      Navigator.pop(context);
                                     },
-                                  ),
-                                );
+                                    onLongPress: () {
+                                      _showAppOptions(context, app, appsCubit);
+                                    },
+                                    child: TweenAnimationBuilder<double>(
+                                      duration: Duration(milliseconds: 400 + (index * 50)),
+                                      tween: Tween(begin: 0.0, end: 1.0),
+                                      curve: Curves.easeOutBack,
+                                      builder: (context, value, child) {
+                                        return Transform.scale(
+                                          scale: value,
+                                          child: Opacity(
+                                            opacity: value.clamp(0.0, 1.0),
+                                            child: Column(
+                                              children: [
+                                                Expanded(
+                                                  child: SquircleIcon(
+                                                    icon: app is ApplicationWithIcon ? MemoryImage(app.icon) : null,
+                                                    size: 64,
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 10),
+                                                Text(
+                                                  app.appName,
+                                                  textAlign: TextAlign.center,
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                  style: const TextStyle(
+                                                    color: Colors.white,
+                                                    fontSize: 13,
+                                                    fontWeight: FontWeight.w400,
+                                                    letterSpacing: 0.5,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  );
                               },
                             ),
                           );
@@ -206,6 +189,59 @@ class _AppDrawerState extends State<AppDrawer> {
           ],
         ),
       ),
+    );
+  }
+
+  void _showAppOptions(BuildContext context, Application app, AppsCubit appsCubit) {
+    final isPinned = appsCubit.getCurrentPayloads(appsStatePayloadTypes: AppsStatePayloadTypes.SHORTCUT_APPS).pinnedApps.contains(app.packageName);
+    
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Container(
+          decoration: BoxDecoration(
+            color: const Color(0xFF1E1E1E).withValues(alpha: 0.95),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 10),
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.white24,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 20),
+              ListTile(
+                leading: const Icon(Icons.settings, color: Colors.white70),
+                title: const Text("App Settings", style: TextStyle(color: Colors.white)),
+                onTap: () {
+                  Navigator.pop(context);
+                  DeviceApps.openAppSettings(app.packageName);
+                },
+              ),
+              ListTile(
+                leading: Icon(isPinned ? Icons.push_pin : Icons.push_pin_outlined, color: Colors.white70),
+                title: Text(isPinned ? "Unpin from Dock" : "Pin to Dock", style: const TextStyle(color: Colors.white)),
+                onTap: () {
+                  Navigator.pop(context);
+                  if (isPinned) {
+                    appsCubit.unpinApp(app.packageName);
+                  } else {
+                    appsCubit.pinApp(app.packageName);
+                  }
+                },
+              ),
+              const SizedBox(height: 20),
+            ],
+          ),
+        );
+      },
     );
   }
 }

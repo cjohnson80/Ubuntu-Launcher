@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:launcher/src/core/modules/404/views/404_page.dart';
 import 'package:launcher/src/core/modules/apps/views/views.dart';
 import 'package:launcher/src/core/modules/home/views/views.dart';
+import 'package:launcher/src/core/modules/lockscreen/views/lockscreen_view.dart';
 import 'package:launcher/src/helpers/utilities/routeAnimator.dart';
 
 class AppRoutes {
@@ -12,6 +13,9 @@ class AppRoutes {
 
       case AppDrawer.route:
         return RouteAnimator.createRoute(AppDrawer());
+
+      case LockScreenView.route:
+        return MaterialPageRoute(builder: (_) => LockScreenView());
 
       default:
         return MaterialPageRoute(

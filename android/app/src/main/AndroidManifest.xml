@@ -10,6 +10,12 @@
 	<!-- allows startup after boot -->
 	<uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
 	<!-- to list "external" applications for Android 11 >= -->
+	<uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+	<!-- to draw global edge overlays for Lomiri gestures -->
+	<uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" />
+	<!-- to query recent applications for the App Spread -->
+	<uses-permission android:name="android.permission.EXPAND_STATUS_BAR" />
+	<!-- to potentially interact with system indicators -->
 	<application android:label="Ubuntu Launcher" android:icon="@mipmap/ic_launcher">
 		<activity android:name=".MainActivity" android:exported="true" android:launchMode="singleTop" android:theme="@style/LaunchTheme" android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode" android:hardwareAccelerated="true" android:windowSoftInputMode="adjustResize">
 			<!--
@@ -45,5 +51,26 @@
 				</action>
 			</intent-filter>
 		</receiver>
+
+		<service android:name=".LomiriNotificationListener"
+			android:label="Ubuntu Launcher Notifications"
+			android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
+			android:exported="true">
+			<intent-filter>
+				<action android:name="android.service.notification.NotificationListenerService" />
+			</intent-filter>
+		</service>
+
+		<service android:name=".EdgeOverlayService"
+			android:exported="false" />
+
+		<activity
+			android:name=".LockScreenActivity"
+			android:exported="false"
+			android:launchMode="singleTop"
+			android:theme="@style/LaunchTheme"
+			android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+			android:hardwareAccelerated="true"
+			android:windowSoftInputMode="adjustResize" />
 	</application>
 </manifest>

@@ -129,13 +129,7 @@ class AppsCubit extends Cubit<AppsState> {
 
   void updateShortcutApps(ShortcutAppsModel shortcutApps) {
     try {
-      if (shortcutApps.phone != null &&
-          shortcutApps.camera != null &&
-          shortcutApps.setting != null &&
-          shortcutApps.message != null) {
-        LocalStorage.setShortcutApps(shortcutApps);
-        LocalStorage.setUserNew();
-      }
+      LocalStorage.setShortcutApps(shortcutApps);
     } catch (error) {
       Logger().w(error);
     }
@@ -149,6 +143,44 @@ class AppsCubit extends Cubit<AppsState> {
     emit(AppsLoading());
     emit(AppsLoaded(
         apps: apps, sortType: sortType, shortcutAppsModel: shortcutApps));
+  }
+
+  void pinApp(String packageName) {
+    if (state is AppsLoaded) {
+      final appState = state as AppsLoaded;
+      final shortcutApps = appState.shortcutAppsModel;
+      
+      if (!shortcutApps.pinnedApps.contains(packageName)) {
+        final newPinned = List<String>.from(shortcutApps.pinnedApps)..add(packageName);
+        final updatedShortcutApps = ShortcutAppsModel(
+          phone: shortcutApps.phone,
+          camera: shortcutApps.camera,
+          message: shortcutApps.message,
+          setting: shortcutApps.setting,
+          pinnedApps: newPinned,
+        );
+        updateShortcutApps(updatedShortcutApps);
+      }
+    }
+  }
+
+  void unpinApp(String packageName) {
+    if (state is AppsLoaded) {
+      final appState = state as AppsLoaded;
+      final shortcutApps = appState.shortcutAppsModel;
+      
+      if (shortcutApps.pinnedApps.contains(packageName)) {
+        final newPinned = List<String>.from(shortcutApps.pinnedApps)..remove(packageName);
+        final updatedShortcutApps = ShortcutAppsModel(
+          phone: shortcutApps.phone,
+          camera: shortcutApps.camera,
+          message: shortcutApps.message,
+          setting: shortcutApps.setting,
+          pinnedApps: newPinned,
+        );
+        updateShortcutApps(updatedShortcutApps);
+      }
+    }
   }
 
   Future<void> listenApps() async {

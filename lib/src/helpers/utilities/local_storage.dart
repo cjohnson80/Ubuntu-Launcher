@@ -10,6 +10,7 @@ class LocalStorage {
     if (shortcutApps.phone != null) prefs.setString(ShortcutAppTypes.PHONE.name, shortcutApps.phone!);
     if (shortcutApps.setting != null) prefs.setString(ShortcutAppTypes.SETTINGS.name, shortcutApps.setting!);
     if (shortcutApps.message != null) prefs.setString(ShortcutAppTypes.MESSAGE.name, shortcutApps.message!);
+    prefs.setStringList('pinnedApps', shortcutApps.pinnedApps);
   }
 
   static Future<ShortcutAppsModel> getShortcutApps() async {
@@ -19,7 +20,8 @@ class LocalStorage {
         camera: prefs.getString(ShortcutAppTypes.CAMERA.name),
         phone: prefs.getString(ShortcutAppTypes.PHONE.name),
         setting: prefs.getString(ShortcutAppTypes.SETTINGS.name),
-        message: prefs.getString(ShortcutAppTypes.MESSAGE.name));
+        message: prefs.getString(ShortcutAppTypes.MESSAGE.name),
+        pinnedApps: prefs.getStringList('pinnedApps') ?? []);
   }
 
   static Future<void> setUserNew() async {
