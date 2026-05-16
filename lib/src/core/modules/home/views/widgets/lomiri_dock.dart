@@ -174,7 +174,15 @@ class LomiriDock extends StatelessWidget {
               filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
               child: Container(
                 width: 70.0,
-                color: Colors.black.withValues(alpha: 0.4), // Dark glassy dock
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.4), // Dark glassy dock
+                  border: Border(
+                    right: BorderSide(
+                      color: Colors.white.withValues(alpha: 0.15),
+                      width: 1,
+                    ),
+                  ),
+                ),
                 height: MediaQuery.of(context).size.height,
                 child: SafeArea(
                   child: Column(
@@ -186,20 +194,25 @@ class LomiriDock extends StatelessWidget {
                           opacityCubit.setOpacitySemi();
                           Navigator.pushNamed(context, AppDrawer.route);
                         },
-                        child: Container(
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
                           margin: const EdgeInsets.only(top: 10),
-                          padding: const EdgeInsets.all(12),
+                          padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.1),
+                            color: Colors.white.withValues(alpha: 0.15),
                             shape: BoxShape.circle,
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.1),
+                              width: 1,
+                            ),
                           ),
                           child: ClipRRect(
                             child: Hero(
                               tag: 'drawer',
                               child: Image.asset(
                                 starterIcon,
-                                width: 35,
-                                height: 35,
+                                width: 32,
+                                height: 32,
                                 color: Colors.white, // sleek monochromatic
                               ),
                             ),

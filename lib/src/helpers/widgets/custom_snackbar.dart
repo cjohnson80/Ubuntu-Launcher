@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:launcher/src/config/constants/size.dart';
 
@@ -23,31 +24,51 @@ class CustomSnackBar {
       margin: const EdgeInsets.all(10),
       behavior: SnackBarBehavior.floating,
       duration: Duration(days: days, seconds: seconds),
-      backgroundColor: color,
-      content: GestureDetector(
-        onTap: fn as void Function()?,
-        child: Container(
-          margin: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Row(
-            children: [
-              const Icon(
-                Icons.info_outline,
-                color: Colors.white,
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      content: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.7),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.2),
+                width: 1,
               ),
-              const SizedBox(
-                width: 20,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.2),
+                  blurRadius: 10,
+                  spreadRadius: 2,
+                )
+              ],
+            ),
+            child: GestureDetector(
+              onTap: fn as void Function()?,
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.info_outline,
+                    color: Colors.white,
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Text(
+                      message,
+                      style: TextStyle(
+                        fontSize: smallTextSize,
+                        color: Colors.white,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  )
+                ],
               ),
-              Expanded(
-                child: Text(
-                  message,
-                  overflow: TextOverflow.visible,
-                  style: TextStyle(fontSize: smallTextSize),
-                ),
-              )
-            ],
+            ),
           ),
         ),
       ),
