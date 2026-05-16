@@ -3,21 +3,19 @@ Ubuntu Launcher
 </h1>
 
 <p align="center">
-
-<a href="https://github.com/jspw/Ubuntu-Launcher/releases">
-<img src="https://img.shields.io/github/downloads/jspw/ubuntu-launcher/total" />
+<a href="https://github.com/cjohnson80/Ubuntu-Launcher/releases">
+<img src="https://img.shields.io/github/downloads/cjohnson80/ubuntu-launcher/total" />
 </a>
-<a href="https://github.com/jspw/Ubuntu-Launcher/releases/tag/2.4.0">
-<img src="https://img.shields.io/github/v/release/jspw/ubuntu-launcher" />
+<a href="https://github.com/cjohnson80/Ubuntu-Launcher/releases/latest">
+<img src="https://img.shields.io/github/v/release/cjohnson80/ubuntu-launcher" />
 </a>
-<a href='https://github.com/jspw/Ubuntu-Launcher/issues'>
-<img src="https://img.shields.io/github/issues-raw/jspw/ubuntu-launcher" />
+<a href='https://github.com/cjohnson80/Ubuntu-Launcher/issues'>
+<img src="https://img.shields.io/github/issues-raw/cjohnson80/ubuntu-launcher" />
 </a>
-<a herf="https://github.com/jspw/Ubuntu-Launcher/blob/master/LICENSE">
-<img src="https://img.shields.io/github/license/jspw/ubuntu-launcher" />
+<a herf="https://github.com/cjohnson80/Ubuntu-Launcher/blob/master/LICENSE">
+<img src="https://img.shields.io/github/license/cjohnson80/ubuntu-launcher" />
 </a>
-
-<img src="https://img.shields.io/github/repo-size/jspw/ubuntu-launcher" />
+<img src="https://img.shields.io/github/repo-size/cjohnson80/ubuntu-launcher" />
 </p>
 
 <hr>
@@ -27,13 +25,13 @@ Ubuntu Launcher
 <img src='./assets/images/logo.png' align="left"
 width="150" hspace="10" vspace="10">
 
-**Ubuntu launcher** is a custom android launcher build using Flutter with a Ubuntu-Gnome look.
-Though flutter is a cross platform UI framework, the launcher has android version only for now.Our launcher is only available on github and [FDroid](https://apt.izzysoft.de/fdroid/index/apk/com.ubuntu.launcher). Any update and release version will be available here.
+**Ubuntu launcher** is a custom android launcher built using Flutter with a modern, glassmorphic Lomiri (formerly Unity 8) aesthetic.
+Though flutter is a cross platform UI framework, the launcher has android version only for now. Our launcher is available on github. Any update and release version will be available here.
 
 <p align="center">
-<a href="https://github.com/jspw/Ubuntu-Launcher/releases/tag/2.4.0">
-    <img alt="Get it on Google Play"
-        src="https://img.shields.io/github/downloads/jspw/ubuntu-launcher/2.3.1/total?label=Download%20Now&logo=ubuntu%20launcher&style=for-the-badge" />
+<a href="https://github.com/cjohnson80/Ubuntu-Launcher/releases">
+    <img alt="Download APK"
+        src="https://img.shields.io/github/downloads/cjohnson80/ubuntu-launcher/total?label=Download%20Now&logo=ubuntu&style=for-the-badge&color=E95420" />
 </a>  
 </p>
 
@@ -47,18 +45,18 @@ At first, it was made for myself having simple look and customization. Then i de
 ## Features
 
 - Can Use as default launcher
-- Simple & Fast UI
+- Simple & Fast UI with Glassmorphic design
+- Modern Lomiri-inspired animations and layout
 - Responsive
 - Clean homeScreen
-- Can change wallpaper
-- Slide Bar
-- Shortcut Apps on SideBar
-- Can change or update shortcut apps
-- Sort apps according to alphabetically, installation and update time
+- Custom Wallpaper support with long-press
+- Glassy Slide Bar (Lomiri Dock)
+- Shortcut Apps on SideBar with long-press selection
+- Sort apps (Alphabetical, Installation Time, Update Time)
 - Auto & Manual pull to update apps
-- Apps Search bar
-- Animated navigation
-- View Apps' settings
+- Dash-inspired Apps Search bar
+- View Apps' settings directly from the drawer
+- Optimized for modern Android (Target SDK 36)
 
 #### Latest Features
 
@@ -73,9 +71,11 @@ At first, it was made for myself having simple look and customization. Then i de
 
 ## Requirements
 
-- MinSdkVersion 16 (Android 4.1.x)
-- **TargetSdkVersion 28 (Android 9)**
-- Hopefully will work fine above android 4.1.x
+- MinSdkVersion 21 (Android 5.0)
+- **TargetSdkVersion 36 (Android 15+)**
+- Flutter 3.x with Dart 3 (Sound Null Safety)
+- Android Gradle Plugin 8.9.1+
+- Gradle 8.11.1+
 
 ## Install
 
@@ -142,7 +142,7 @@ The "Run at start" permission is required to run the app when device turn on so 
 
 Ubuntu launcher is a free and open source project. Any contributions are welcome. Here are a few ways you can help:
 
-- [Report bugs and make suggestions.](https://github.com/jspw/ubuntu-launcher/issues)
+- [Report bugs and make suggestions.](https://github.com/cjohnson80/Ubuntu-Launcher/issues)
 - Write some code. Please follow the code style used in the project to make a review process faster.
 
 ## License
