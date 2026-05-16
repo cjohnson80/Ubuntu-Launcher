@@ -39,8 +39,12 @@ Though flutter is a cross platform UI framework, the launcher has android versio
 
 ## About
 
-This application is for those who want a simple, clean and fast launcher to use. Most of the launchers in the play store or any market place are full with nasted ui and the most annoying thing is their ads. As it is in an initial stage, I'm trying to add some extra features but not much fancy.
-At first, it was made for myself having simple look and customization. Then i decided to make it public.As it is a open source project anyone can use it and the code base is transparent so they can edit and customize it under the license.
+This application is for those who want a simple, clean and fast launcher to use. Most of the launchers in the play store or any market place are full with nested UI and the most annoying thing is their ads. 
+
+## Authors & Credits
+
+- **Original Author**: [Mehedi Hasan Shifat](http://github.com/jspw) - Initial concept and development.
+- **Modernization & Maintenance**: [Chris Johnson](https://github.com/cjohnson80) - Ported to Dart 3, updated for modern Android SDKs, and implemented glassmorphic Lomiri UI.
 
 ## Features
 
