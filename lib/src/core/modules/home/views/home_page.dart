@@ -25,7 +25,7 @@ class Home extends StatefulWidget {
 class HomeState extends State<Home> {
   final GlobalKey<ScaffoldState> scaffoldKey = GlobalKey<ScaffoldState>();
   final String defaultWallpaper = "assets/images/wallpaper.jpg";
-  final String starterIcon = "assets/images/drawer.png";
+  final String starterIcon = "assets/images/logo.png";
 
   String? currentWallpaper;
   bool isDockVisible = false;
