@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:launcher/src/blocs/apps_cubit.dart';
+import 'package:launcher/src/config/constants/colors.dart';
 import 'package:launcher/src/config/routes/app_routes.dart';
 import 'package:launcher/src/config/themes/cubit/opacity_cubit.dart';
 import 'package:launcher/src/data/apps_api_provider.dart';
 
-import './config/routes/app_routes.dart';
 
 class MyApp extends StatelessWidget {
+  const MyApp({super.key});
   @override
   Widget build(BuildContext context) {
     return MultiBlocProvider(
@@ -22,13 +23,14 @@ class MyApp extends StatelessWidget {
           showPerformanceOverlay: false,
           debugShowCheckedModeBanner: false,
           theme: ThemeData(
-              primaryColor: Colors.pink,
-              accentColor: Colors.white,
+              primaryColor: ubuntuOrange,
+              scaffoldBackgroundColor: Colors.black,
               visualDensity: VisualDensity.adaptivePlatformDensity,
-              canvasColor: Colors.transparent),
-          darkTheme: ThemeData(
-            // New
-            brightness: Brightness.light, // New
+              canvasColor: Colors.transparent,
+              colorScheme: ColorScheme.fromSeed(
+                seedColor: ubuntuOrange,
+                brightness: Brightness.dark,
+              ),
           ),
           title: "Ubuntu Launcher",
           onGenerateRoute: AppRoutes.onGenerateRoute,

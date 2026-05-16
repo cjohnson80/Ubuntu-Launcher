@@ -1,10 +1,10 @@
 import 'dart:ui';
 
-final double pixelRatio = window.devicePixelRatio;
+final double pixelRatio = PlatformDispatcher.instance.views.first.devicePixelRatio;
 
-final double physicalHeight = window.physicalSize.height;
+final double physicalHeight = PlatformDispatcher.instance.views.first.physicalSize.height;
 
-final double physicalWidth = window.physicalSize.width;
+final double physicalWidth = PlatformDispatcher.instance.views.first.physicalSize.width;
 
 final double deviceHeight = physicalHeight / pixelRatio;
 

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:launcher/src/config/constants/size.dart';
-import 'package:logger/logger.dart';
 
 class CustomSnackBar {
   final BuildContext context;
@@ -8,27 +7,25 @@ class CustomSnackBar {
   final int days;
   final int seconds;
   final Color color;
-  final Function fn;
-  final GlobalKey<ScaffoldState> key;
+  final Function? fn;
 
   CustomSnackBar({
-    @required this.context,
-    @required this.message,
-    this.seconds: 2,
+    required this.context,
+    required this.message,
+    this.seconds = 2,
     this.fn,
-    this.days: 0,
-    this.color,
-    this.key,
+    this.days = 0,
+    this.color = Colors.black,
   });
 
-  display() {
+  void display() {
     final snackBar = SnackBar(
       margin: const EdgeInsets.all(10),
       behavior: SnackBarBehavior.floating,
       duration: Duration(days: days, seconds: seconds),
       backgroundColor: color,
       content: GestureDetector(
-        onTap: fn,
+        onTap: fn as void Function()?,
         child: Container(
           margin: const EdgeInsets.all(10),
           decoration: BoxDecoration(
@@ -36,11 +33,11 @@ class CustomSnackBar {
           ),
           child: Row(
             children: [
-              Icon(
-                Icons.error,
+              const Icon(
+                Icons.info_outline,
                 color: Colors.white,
               ),
-              SizedBox(
+              const SizedBox(
                 width: 20,
               ),
               Expanded(
@@ -56,9 +53,6 @@ class CustomSnackBar {
       ),
     );
 
-    if (key != null) {
-      return key.currentState.showSnackBar(snackBar);
-    } else
-      return ScaffoldMessenger.of(context).showSnackBar(snackBar);
+    ScaffoldMessenger.of(context).showSnackBar(snackBar);
   }
 }

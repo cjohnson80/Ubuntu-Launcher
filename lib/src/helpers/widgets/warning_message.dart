@@ -7,20 +7,17 @@ class WarningMessage extends CustomSnackBar {
   final String warning;
   final int days;
   final int seconds;
-  final GlobalKey<ScaffoldState> key;
 
 // create constructor for warning class
   WarningMessage({
-    @required this.context,
-    @required this.warning,
-    this.days,
-    this.seconds,
-    this.key,
+    required this.context,
+    required this.warning,
+    this.days = 0,
+    this.seconds = 2,
   }) : super(
             context: context,
             message: warning,
             days: days,
             seconds: seconds,
-            color: warningColor,
-            key: key);
+            color: warningColor);
 }

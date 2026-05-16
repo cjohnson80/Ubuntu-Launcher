@@ -12,7 +12,7 @@ part 'apps_state.dart';
 
 class AppsCubit extends Cubit<AppsState> {
   final AppsApiProvider appsApiProvider;
-  AppsCubit({@required this.appsApiProvider}) : super(AppsInitiateState()) {
+  AppsCubit({required this.appsApiProvider}) : super(AppsInitiateState()) {
     listenApps();
   }
 
@@ -35,7 +35,7 @@ class AppsCubit extends Cubit<AppsState> {
       emit(AppsLoaded(
           shortcutAppsModel: shortcutApps,
           apps: apps,
-          sortType: sortType ?? SortTypes.Alphabetically.name));
+          sortType: sortType));
     } catch (error) {
       Logger().w(error);
       emit(AppsError(error.toString()));
@@ -62,7 +62,7 @@ class AppsCubit extends Cubit<AppsState> {
             appsStatePayloadTypes: AppsStatePayloadTypes.SHORTCUT_APPS)));
   }
 
-  dynamic getCurrentPayloads({AppsStatePayloadTypes appsStatePayloadTypes}) {
+  dynamic getCurrentPayloads({AppsStatePayloadTypes? appsStatePayloadTypes}) {
     if (state is AppsLoaded) {
       final appState = state as AppsLoaded;
       return appsStatePayloadTypes == AppsStatePayloadTypes.APPS
@@ -81,7 +81,7 @@ class AppsCubit extends Cubit<AppsState> {
   }
 
   Future<ShortcutAppsModel> getShortcutApps(List<Application> apps) async {
-    String settings, camera, sms, phone;
+    String? settings, camera, sms, phone;
 
     try {
       final isNewUser = await LocalStorage.isUserNew();
@@ -123,6 +123,7 @@ class AppsCubit extends Cubit<AppsState> {
       }
     } catch (error) {
       Logger().w(error);
+      rethrow;
     }
   }
 
@@ -159,16 +160,18 @@ class AppsCubit extends Cubit<AppsState> {
           final appState = state as AppsLoaded;
           final apps = appState.apps;
 
-          Logger().wtf(event);
+          Logger().f(event);
 
           if (event.event == ApplicationEventType.disabled) {
             final applicationEventType = event as ApplicationEventDisabled;
-            Application app =
+            Application? app =
                 await DeviceApps.getApp(applicationEventType.packageName);
-            apps.add(app);
-            loadApps();
-            Logger()
-                .w("${applicationEventType.application.appName} is enabled");
+            if (app != null) {
+              apps.add(app);
+              loadApps();
+              Logger()
+                  .w("${applicationEventType.application.appName} is enabled");
+            }
           } else if (event.event == ApplicationEventType.enabled) {
             apps.removeWhere(
                 (element) => element.packageName == event.packageName);
@@ -181,12 +184,14 @@ class AppsCubit extends Cubit<AppsState> {
             Logger().w("${applicationEventType.packageName} is uninstalled");
           } else if (event.event == ApplicationEventType.installed) {
             final applicationEventType = event as ApplicationEventInstalled;
-            Application app =
+            Application? app =
                 await DeviceApps.getApp(applicationEventType.packageName);
-            apps.add(app);
-            loadApps();
+            if (app != null) {
+              apps.add(app);
+              loadApps();
 
-            Logger().w("${applicationEventType.application} is installed");
+              Logger().w("${applicationEventType.application} is installed");
+            }
           }
 
           updateApps(apps);
@@ -199,9 +204,9 @@ class AppsCubit extends Cubit<AppsState> {
   }
 
   List<Application> getAppsSorted(
-      {List<Application> appsToSort, String sortType}) {
+      {List<Application>? appsToSort, String? sortType}) {
     List<Application> apps = appsToSort ??
-        getCurrentPayloads(appsStatePayloadTypes: AppsStatePayloadTypes.APPS) ??
+        (getCurrentPayloads(appsStatePayloadTypes: AppsStatePayloadTypes.APPS) as List<Application>?) ??
         [];
 
     if (sortType == null || sortType == SortTypes.Alphabetically.name) {

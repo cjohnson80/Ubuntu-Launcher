@@ -1,10 +1,9 @@
-import 'package:device_apps/device_apps.dart';
 
 class ShortcutAppsModel {
-  String phone;
-  String message;
-  String camera;
-  String setting;
+  String? phone;
+  String? message;
+  String? camera;
+  String? setting;
 
   ShortcutAppsModel({this.phone, this.camera, this.message, this.setting});
 

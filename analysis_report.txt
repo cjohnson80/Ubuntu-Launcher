@@ -1,0 +1,20 @@
+Analyzing ubuntu-launcher...                                    
+
+  error • The body might complete normally, causing 'null' to be returned, but the return type, 'FutureOr<ShortcutAppsModel>', is a potentially non-nullable type • lib/src/blocs/apps_cubit.dart:83:29 • body_might_complete_normally
+   info • 'wtf' is deprecated and shouldn't be used. [Level.wtf] is being deprecated in favor of [Level.fatal], use [f] instead • lib/src/blocs/apps_cubit.dart:162:20 • deprecated_member_use
+  error • A value of type 'Application?' can't be assigned to a variable of type 'Application' • lib/src/blocs/apps_cubit.dart:167:17 • invalid_assignment
+  error • A value of type 'Application?' can't be assigned to a variable of type 'Application' • lib/src/blocs/apps_cubit.dart:185:17 • invalid_assignment
+  error • The parameter 'key' can't have a value of 'null' because of its type, but the implicit default value is 'null' • lib/src/core/modules/404/views/404_page.dart:8:22 • missing_default_value_for_parameter
+   info • 'required' is deprecated and shouldn't be used. In Dart 2.12 and later, use the built-in `required` keyword to mark a named parameter as required • lib/src/core/modules/404/views/404_page.dart:8:28 • deprecated_member_use
+  error • With null safety, use the 'required' keyword, not the '@required' annotation • lib/src/core/modules/404/views/404_page.dart:8:42 • missing_default_value_for_parameter
+   info • 'onPopInvoked' is deprecated and shouldn't be used. Use onPopInvokedWithResult instead. This feature was deprecated after v3.22.0-12.0.pre • lib/src/core/modules/apps/views/app_drawer.dart:33:7 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/src/core/modules/apps/views/app_drawer.dart:44:37 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/src/core/modules/apps/views/app_drawer.dart:64:51 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/src/core/modules/apps/views/app_drawer.dart:142:75 • deprecated_member_use
+   info • 'canLaunch' is deprecated and shouldn't be used. Use canLaunchUrl instead • lib/src/core/modules/home/views/widgets/lomiri_dock.dart:23:15 • deprecated_member_use
+   info • 'launch' is deprecated and shouldn't be used. Use launchUrl instead • lib/src/core/modules/home/views/widgets/lomiri_dock.dart:24:13 • deprecated_member_use
+warning • This default clause is covered by the previous cases • lib/src/core/modules/home/views/widgets/lomiri_dock.dart:73:33 • unreachable_switch_default
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/src/core/modules/home/views/widgets/lomiri_dock.dart:178:37 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/src/core/modules/home/views/widgets/lomiri_dock.dart:194:49 • deprecated_member_use
+
+16 issues found. (ran in 2.4s)
