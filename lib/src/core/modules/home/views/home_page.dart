@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -25,10 +26,16 @@ class Home extends StatefulWidget {
 class HomeState extends State<Home> {
   final GlobalKey<ScaffoldState> scaffoldKey = GlobalKey<ScaffoldState>();
   final String defaultWallpaper = "assets/images/wallpaper.jpg";
-  final String starterIcon = "assets/images/logo.png";
+  final String starterIcon = "assets/images/ubuntu_touch_logo.png";
 
   String? currentWallpaper;
   bool isDockVisible = false;
+  bool isSidebarOnly = false;
+
+  // Gesture Tracking
+  double _rightSwipeDistance = 0.0;
+  DateTime? _rightSwipeStartTime;
+  final ValueNotifier<double> _dockHighlightY = ValueNotifier<double>(-1.0);
 
   @override
   void initState() {
@@ -37,9 +44,13 @@ class HomeState extends State<Home> {
     _initGlobalEdgeService();
     SystemServices.setMethodCallHandler((call) async {
       if (call.method == 'openDock') {
-        if (mounted && !isDockVisible) {
+        final Map<dynamic, dynamic>? args = call.arguments as Map<dynamic, dynamic>?;
+        final bool sidebarOnly = args?['sidebarOnly'] ?? false;
+        
+        if (mounted) {
           setState(() {
             isDockVisible = true;
+            isSidebarOnly = sidebarOnly;
           });
         }
       }
@@ -116,6 +127,7 @@ class HomeState extends State<Home> {
         },
         child: Scaffold(
           key: scaffoldKey,
+          backgroundColor: Colors.transparent,
           body: BlocBuilder<AppsCubit, AppsState>(
             builder: (context, state) {
               if (state is AppsLoading) {
@@ -131,95 +143,184 @@ class HomeState extends State<Home> {
 
               return Stack(
                 children: [
-                  // Wallpaper Layer
-                  GestureDetector(
-                    onHorizontalDragUpdate: (details) {
-                      final screenWidth = MediaQuery.of(context).size.width;
-                      
-                      // Right edge swipe (App Spread / Multitasking)
-                      if (details.globalPosition.dx > screenWidth - 50 && details.delta.dx < -10) {
-                        HapticFeedback.mediumImpact();
-                        _openAppSpread(context);
-                      }
+                  if (!isSidebarOnly) ...[
+                    // Wallpaper Layer
+                    GestureDetector(
+                      onHorizontalDragStart: (details) {
+                        final screenWidth = MediaQuery.of(context).size.width;
+                        if (details.globalPosition.dx > screenWidth - 50) {
+                          _rightSwipeDistance = 0.0;
+                          _rightSwipeStartTime = DateTime.now();
+                        }
+                        if (details.globalPosition.dx < 50) {
+                          if (!isDockVisible) {
+                            setState(() {
+                              isDockVisible = true;
+                            });
+                          }
+                        }
+                      },
+                      onHorizontalDragUpdate: (details) {
+                        // Right edge swipe tracking
+                        if (_rightSwipeStartTime != null) {
+                          if (details.delta.dx < 0) {
+                            _rightSwipeDistance -= details.delta.dx;
+                          }
+                        }
 
-                      // Reveal dock on swipe from left edge
-                      if (details.globalPosition.dx < 50 && details.delta.dx > 10) {
-                        if (!isDockVisible) {
+                        // Hide dock on swipe to left
+                        if (isDockVisible && details.delta.dx < -10 && details.globalPosition.dx > 100) {
                           HapticFeedback.lightImpact();
                           setState(() {
-                            isDockVisible = true;
+                            isDockVisible = false;
+                            isSidebarOnly = false;
                           });
+                          _dockHighlightY.value = -1.0;
                         }
-                      }
-                      // Hide dock on swipe to left
-                      if (isDockVisible && details.delta.dx < -10) {
-                        HapticFeedback.lightImpact();
-                        setState(() {
-                          isDockVisible = false;
-                        });
-                      }
-                    },
-                    onVerticalDragUpdate: (details) {
-                      final screenHeight = MediaQuery.of(context).size.height;
-                      
-                      // Swipe down from top to open Indicators Panel
-                      if (details.globalPosition.dy < 50 && details.delta.dy > 10) {
-                        HapticFeedback.mediumImpact();
-                        _openIndicatorsPanel(context);
-                      }
+                      },
+                      onHorizontalDragEnd: (details) {
+                        final screenWidth = MediaQuery.of(context).size.width;
+                        
+                        // Right edge evaluation (Alt-Tab vs App Spread)
+                        if (_rightSwipeStartTime != null) {
+                          final swipeDuration = DateTime.now().difference(_rightSwipeStartTime!).inMilliseconds;
+                          
+                          if (swipeDuration < 200 && _rightSwipeDistance > 60 && _rightSwipeDistance < screenWidth * 0.3) {
+                            HapticFeedback.lightImpact();
+                            SystemServices.launchLastUsedApp();
+                          } 
+                          else if (_rightSwipeDistance >= screenWidth * 0.3) {
+                            HapticFeedback.mediumImpact();
+                            _openAppSpread(context);
+                          }
+                          
+                          _rightSwipeStartTime = null;
+                          _rightSwipeDistance = 0.0;
+                        }
 
-                      // Swipe up from bottom to open App Drawer (Dash)
-                      if (details.globalPosition.dy > screenHeight - 100 && details.delta.dy < -10) {
-                        HapticFeedback.mediumImpact();
-                        opacityCubit.setOpacitySemi();
-                        Navigator.pushNamed(context, '/app-drawer');
-                      }
-                    },
-                    onLongPress: () async {
-                      pickImageFile(context, (image) async {
-                        if (image == null) {
-                          CustomSnackBar(
-                            context: context,
-                            message: "No image is selected",
-                            color: Colors.yellow,
-                          ).display();
-                        } else {
-                          setState(() {
-                            currentWallpaper = image.path;
-                          });
-                          LocalStorage.setWallpaper(image.path);
-                          SuccessMessage(
-                            context: context,
-                            message: "Wallpaper changed successfully",
-                          ).display();
+                        _dockHighlightY.value = -1.0;
+                      },
+                      onVerticalDragUpdate: (details) {
+                        final screenHeight = MediaQuery.of(context).size.height;
+
+                        if (details.delta.dy > 10 && details.globalPosition.dy < screenHeight * 0.5) {
+                          SystemServices.closeSystemPanels();
+                          HapticFeedback.mediumImpact();
+                          _openIndicatorsPanel(context);
                         }
-                      });
-                    },
-                    child: Container(
-                      decoration: BoxDecoration(
-                        image: DecorationImage(
-                          image: currentWallpaper != null
-                               ? FileImage(File(currentWallpaper!))
-                               : AssetImage(defaultWallpaper) as ImageProvider,
-                          fit: BoxFit.cover,
+
+                        if (details.globalPosition.dy > screenHeight - 100 && details.delta.dy < -10) {
+                          HapticFeedback.mediumImpact();
+                          opacityCubit.setOpacitySemi();
+                          Navigator.pushNamed(context, '/app-drawer');
+                        }
+                      },
+                      onLongPress: () async {
+                        pickImageFile(context, (image) async {
+                          if (image == null) {
+                            CustomSnackBar(
+                              context: context,
+                              message: "No image is selected",
+                              color: Colors.yellow,
+                            ).display();
+                          } else {
+                            setState(() {
+                              currentWallpaper = image.path;
+                            });
+                            LocalStorage.setWallpaper(image.path);
+                            SuccessMessage(
+                              context: context,
+                              message: "Wallpaper changed successfully",
+                            ).display();
+                          }
+                        });
+                      },
+                      child: Container(
+                        decoration: BoxDecoration(
+                          image: DecorationImage(
+                            image: currentWallpaper != null
+                                 ? FileImage(File(currentWallpaper!))
+                                 : AssetImage(defaultWallpaper) as ImageProvider,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                        height: double.infinity,
+                        width: double.infinity,
+                      ),
+                    ),
+                  ],
+
+                  if (!isSidebarOnly) ...[
+                    // Lomiri Top Bar (Indicators Header)
+                    Align(
+                      alignment: Alignment.topCenter,
+                      child: ClipRect(
+                        child: BackdropFilter(
+                          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                          child: Container(
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.15),
+                              border: Border(
+                                bottom: BorderSide(
+                                  color: Colors.white.withValues(alpha: 0.2),
+                                  width: 0.5,
+                                )
+                              )
+                            ),
+                            child: SafeArea(
+                              bottom: false,
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 10),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: [
+                                    _buildTopBarIndicator(Icons.wifi, 0),
+                                    const SizedBox(width: 15),
+                                    _buildTopBarIndicator(Icons.volume_up, 1),
+                                    const SizedBox(width: 15),
+                                    _buildTopBarIndicator(Icons.battery_full, 2),
+                                    const SizedBox(width: 15),
+                                    _buildTopBarIndicator(Icons.notifications, 3),
+                                    const SizedBox(width: 10),
+                                    GestureDetector(
+                                      onVerticalDragUpdate: (details) {
+                                        if (details.delta.dy > 5) {
+                                          _openIndicatorsPanel(context, initialTabIndex: 3);
+                                        }
+                                      },
+                                      child: const Text(
+                                        "10:42 AM", 
+                                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
+                                      ),
+                                    )
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
                         ),
                       ),
-                      height: double.infinity,
-                      width: double.infinity,
                     ),
-                  ),
+                  ],
 
                   // UI Overlay Layer: Lomiri Dock (Animated)
                   AnimatedPositioned(
                     duration: const Duration(milliseconds: 300),
                     curve: Curves.easeOutCubic,
-                    left: isDockVisible ? 0 : -70,
+                    left: isDockVisible ? 0 : -85,
                     top: 0,
                     bottom: 0,
-                    child: Row(
-                      children: [
-                        LomiriDock(starterIcon: starterIcon),
-                      ],
+                    width: 85,
+                    child: LomiriDock(
+                      starterIcon: starterIcon,
+                      highlightY: _dockHighlightY,
+                      onHide: () {
+                        setState(() {
+                          isDockVisible = false;
+                          isSidebarOnly = false;
+                        });
+                      },
                     ),
                   ),
 
@@ -261,6 +362,18 @@ class HomeState extends State<Home> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildTopBarIndicator(IconData icon, int tabIndex) {
+    return GestureDetector(
+      onVerticalDragUpdate: (details) {
+        if (details.delta.dy > 5) {
+          HapticFeedback.selectionClick();
+          _openIndicatorsPanel(context, initialTabIndex: tabIndex);
+        }
+      },
+      child: Icon(icon, color: Colors.white, size: 18),
     );
   }
 
@@ -311,7 +424,7 @@ class HomeState extends State<Home> {
     );
   }
 
-  void _openIndicatorsPanel(BuildContext context) async {
+  void _openIndicatorsPanel(BuildContext context, {int initialTabIndex = 3}) async {
     final hasPermission = await SystemServices.checkNotificationPermission();
     if (!hasPermission) {
       showDialog(
@@ -347,7 +460,7 @@ class HomeState extends State<Home> {
       barrierLabel: "IndicatorsPanel",
       transitionDuration: const Duration(milliseconds: 300),
       pageBuilder: (context, animation, secondaryAnimation) {
-        return const IndicatorsPanelView();
+        return IndicatorsPanelView(initialTabIndex: initialTabIndex);
       },
       transitionBuilder: (context, animation, secondaryAnimation, child) {
         return SlideTransition(

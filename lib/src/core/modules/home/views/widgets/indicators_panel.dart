@@ -5,7 +5,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:launcher/src/helpers/utilities/system_services.dart';
 
 class IndicatorsPanelView extends StatefulWidget {
-  const IndicatorsPanelView({Key? key}) : super(key: key);
+  final int initialTabIndex;
+
+  const IndicatorsPanelView({Key? key, this.initialTabIndex = 3}) : super(key: key);
 
   @override
   State<IndicatorsPanelView> createState() => _IndicatorsPanelViewState();
@@ -18,7 +20,7 @@ class _IndicatorsPanelViewState extends State<IndicatorsPanelView> with SingleTi
   void initState() {
     super.initState();
     // 4 standard Lomiri tabs: Network, Sound, Battery, Notifications
-    _tabController = TabController(length: 4, vsync: this, initialIndex: 3);
+    _tabController = TabController(length: 4, vsync: this, initialIndex: widget.initialTabIndex);
   }
 
   @override
@@ -109,17 +111,7 @@ class _IndicatorsPanelViewState extends State<IndicatorsPanelView> with SingleTi
                       ),
                       
                       // Tab Content
-                      Expanded(
-                        child: TabBarView(
-                          controller: _tabController,
-                          children: [
-                            _buildPlaceholderTab("Network Settings", Icons.wifi, textColor),
-                            _buildPlaceholderTab("Sound & Media", Icons.volume_up, textColor),
-                            _buildPlaceholderTab("Battery & Power", Icons.battery_full, textColor),
-                            _buildNotificationsTab(textColor),
-                          ],
-                        ),
-                      ),
+                      _buildTabBarView(textColor),
 
                       // Bottom Dismissal Handle (Solves "Finger Gymnastics" reaching to the top)
                       GestureDetector(
@@ -220,6 +212,30 @@ class _IndicatorsPanelViewState extends State<IndicatorsPanelView> with SingleTi
                       Icon(Icons.keyboard_arrow_right, size: 24, color: isDark ? Colors.white54 : Colors.black54),
                     ],
                   ),
+                  const SizedBox(height: 30),
+                  const Divider(),
+                  const SizedBox(height: 10),
+                  ListTile(
+                    leading: const Icon(Icons.home_outlined, color: ubuntuOrange),
+                    title: Text(
+                      "Set as Default Launcher",
+                      style: TextStyle(
+                        color: isDark ? Colors.white : Colors.black87,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    subtitle: Text(
+                      "Finalize your Lomiri experience",
+                      style: TextStyle(
+                        color: isDark ? Colors.white60 : Colors.black54,
+                        fontSize: 12,
+                      ),
+                    ),
+                    onTap: () {
+                      Navigator.pop(context);
+                      SystemServices.setAsDefaultLauncher();
+                    },
+                  ),
                   const SizedBox(height: 20),
                 ],
               ),
@@ -229,24 +245,163 @@ class _IndicatorsPanelViewState extends State<IndicatorsPanelView> with SingleTi
       },
     );
   }
-
-  Widget _buildPlaceholderTab(String title, IconData icon, Color textColor) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+  Widget _buildTabBarView(Color textColor) {
+    return Expanded(
+      child: TabBarView(
+        controller: _tabController,
         children: [
-          Icon(icon, size: 60, color: textColor.withValues(alpha: 0.2)),
-          const SizedBox(height: 15),
-          Text(
-            title,
-            style: TextStyle(color: textColor, fontSize: 18),
+          _buildNetworkTab(textColor),
+          _buildSoundTab(textColor),
+          _buildBatteryTab(textColor),
+          _buildNotificationsTab(textColor),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNetworkTab(Color textColor) {
+    return Padding(
+      padding: const EdgeInsets.all(20.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text("Network & Connectivity", style: TextStyle(color: textColor, fontSize: 18, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 20),
+          _buildActionTile(
+            icon: Icons.wifi,
+            title: "Wi-Fi Settings",
+            subtitle: "Manage connections",
+            textColor: textColor,
+            onTap: () => SystemServices.openWifiSettings(),
           ),
-          const SizedBox(height: 10),
-          Text(
-            "Integration pending Kotlin MethodChannels",
-            style: TextStyle(color: textColor.withValues(alpha: 0.5), fontSize: 14),
+          const SizedBox(height: 15),
+          _buildActionTile(
+            icon: Icons.bluetooth,
+            title: "Bluetooth Settings",
+            subtitle: "Manage devices",
+            textColor: textColor,
+            onTap: () => SystemServices.openBluetoothSettings(),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSoundTab(Color textColor) {
+    return Padding(
+      padding: const EdgeInsets.all(20.0),
+      child: FutureBuilder<Map<String, dynamic>?>(
+        future: SystemServices.getVolume(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+          
+          double currentVol = (snapshot.data!['current'] as int).toDouble();
+          double maxVol = (snapshot.data!['max'] as int).toDouble();
+
+          return StatefulBuilder(
+            builder: (context, setState) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text("Sound", style: TextStyle(color: textColor, fontSize: 18, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 30),
+                  Row(
+                    children: [
+                      Icon(currentVol == 0 ? Icons.volume_off : Icons.volume_up, color: textColor.withValues(alpha: 0.7)),
+                      Expanded(
+                        child: Slider(
+                          value: currentVol,
+                          min: 0,
+                          max: maxVol,
+                          activeColor: ubuntuOrange,
+                          inactiveColor: textColor.withValues(alpha: 0.2),
+                          onChanged: (val) {
+                            setState(() => currentVol = val);
+                            SystemServices.setVolume(val.toInt());
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              );
+            }
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildBatteryTab(Color textColor) {
+    return Padding(
+      padding: const EdgeInsets.all(20.0),
+      child: FutureBuilder<Map<String, dynamic>?>(
+        future: SystemServices.getBatteryLevel(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+          
+          int level = snapshot.data!['level'] as int;
+          bool isCharging = snapshot.data!['isCharging'] as bool;
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text("Battery", style: TextStyle(color: textColor, fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 30),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    isCharging ? Icons.battery_charging_full : Icons.battery_full,
+                    size: 80,
+                    color: isCharging ? Colors.greenAccent : (level > 20 ? textColor : Colors.redAccent),
+                  ),
+                  const SizedBox(width: 20),
+                  Text(
+                    "$level%",
+                    style: TextStyle(color: textColor, fontSize: 48, fontWeight: FontWeight.w300),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Center(
+                child: Text(
+                  isCharging ? "Charging" : "Discharging",
+                  style: TextStyle(color: textColor.withValues(alpha: 0.5), fontSize: 16),
+                ),
+              )
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildActionTile({required IconData icon, required String title, required String subtitle, required Color textColor, required VoidCallback onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(15),
+        decoration: BoxDecoration(
+          color: textColor == Colors.white ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: textColor, size: 28),
+            const SizedBox(width: 15),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: TextStyle(color: textColor, fontSize: 16, fontWeight: FontWeight.w500)),
+                  Text(subtitle, style: TextStyle(color: textColor.withValues(alpha: 0.5), fontSize: 13)),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right, color: textColor.withValues(alpha: 0.5)),
+          ],
+        ),
       ),
     );
   }

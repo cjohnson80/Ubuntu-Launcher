@@ -18,8 +18,10 @@ import 'package:url_launcher/url_launcher.dart';
 
 class LomiriDock extends StatefulWidget {
   final String starterIcon;
+  final ValueNotifier<double>? highlightY;
+  final VoidCallback? onHide;
 
-  const LomiriDock({Key? key, required this.starterIcon}) : super(key: key);
+  const LomiriDock({Key? key, required this.starterIcon, this.highlightY, this.onHide}) : super(key: key);
 
   @override
   State<LomiriDock> createState() => _LomiriDockState();
@@ -68,7 +70,6 @@ class _LomiriDockState extends State<LomiriDock> {
           backgroundColor: Color.fromRGBO(30, 30, 30, 0.9),
           title: Text(
             'Select ${appTypes.name} App',
-            overflow: TextOverflow.ellipsis,
             style: TextStyle(fontSize: normalTextSize, color: ubuntuOrange, fontWeight: FontWeight.bold),
           ),
           content: BlocBuilder<AppsCubit, AppsState>(
@@ -173,6 +174,7 @@ class _LomiriDockState extends State<LomiriDock> {
                 ).display();
               }
             }
+            widget.onHide?.call();
           } catch (error) {
             Logger().w(error);
             ErrorMessage(context: context, error: "Something went wrong, Please try again.").display();
@@ -207,6 +209,7 @@ class _LomiriDockState extends State<LomiriDock> {
   @override
   Widget build(BuildContext context) {
     final opacityCubit = BlocProvider.of<OpacityCubit>(context);
+    final appsCubit = BlocProvider.of<AppsCubit>(context);
 
     return BlocBuilder<OpacityCubit, OpacityState>(
       builder: (context, state) {
@@ -214,16 +217,16 @@ class _LomiriDockState extends State<LomiriDock> {
         return Opacity(
           opacity: isDrawerOpen ? 1.0 : 0.4,
           child: Container(
-            width: 70.0,
+            width: 85.0,
             decoration: const BoxDecoration(
-              color: Colors.black, // Classic Solid Black Dock
+              color: Colors.black, 
             ),
             height: MediaQuery.of(context).size.height,
             child: SafeArea(
+              top: false,
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // Apps Area (Top aligned now)
                   BlocBuilder<AppsCubit, AppsState>(
                     builder: (context, appsState) {
                       if (appsState is AppsLoaded) {
@@ -231,7 +234,6 @@ class _LomiriDockState extends State<LomiriDock> {
                           appsState.shortcutAppsModel.pinnedApps.contains(app.packageName)
                         ).toList();
 
-                        // Filter running apps to not duplicate pinned apps or shortcuts
                         final shortcutPkgs = [
                           appsState.shortcutAppsModel.phone,
                           appsState.shortcutAppsModel.message,
@@ -263,14 +265,13 @@ class _LomiriDockState extends State<LomiriDock> {
                                 _buildShortcut(context, Icons.settings_outlined, appsState.shortcutAppsModel.setting, ShortcutAppTypes.SETTINGS,
                                   appWithIcon: appsState.apps.cast<Application?>().firstWhere((a) => a?.packageName == appsState.shortcutAppsModel.setting, orElse: () => null)),
 
-                                // Live State: Running Apps indicator
                                 if (displayRunningApps.isNotEmpty) ...[
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
+                                  const Padding(
+                                    padding: EdgeInsets.symmetric(vertical: 10, horizontal: 15),
                                     child: Divider(color: Colors.white24, height: 1),
                                   ),
                                   for (final app in displayRunningApps)
-                                    _buildRunningApp(context, app),
+                                    _buildRunningApp(context, app, appsCubit),
                                 ]
                               ],
                             ),
@@ -281,7 +282,6 @@ class _LomiriDockState extends State<LomiriDock> {
                     },
                   ),
                   
-                  // Bottom Launcher Icon (Ubuntu Starter)
                   GestureDetector(
                     onTap: () {
                       opacityCubit.setOpacitySemi();
@@ -289,10 +289,10 @@ class _LomiriDockState extends State<LomiriDock> {
                     },
                     child: Container(
                       margin: const EdgeInsets.only(bottom: 20, top: 10),
-                      padding: const EdgeInsets.all(12),
-                      decoration: const BoxDecoration(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
                         color: ubuntuOrange,
-                        shape: BoxShape.circle,
+                        borderRadius: BorderRadius.circular(12),
                       ),
                       child: Hero(
                         tag: 'drawer',
@@ -310,14 +310,39 @@ class _LomiriDockState extends State<LomiriDock> {
             ),
           ),
         );
-
       },
     );
   }
 
-  Widget _buildRunningApp(BuildContext context, Application app) {
+  Widget _buildRunningApp(BuildContext context, Application app, AppsCubit appsCubit) {
     return GestureDetector(
-      onTap: () => DeviceApps.openApp(app.packageName),
+      onTap: () {
+        DeviceApps.openApp(app.packageName);
+        widget.onHide?.call();
+      },
+      onLongPress: () {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            backgroundColor: const Color(0xFF1E1E1E),
+            title: const Text("Pin App", style: TextStyle(color: Colors.white)),
+            content: Text("Do you want to pin ${app.appName} to the dock?", style: const TextStyle(color: Colors.white70)),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text("Cancel"),
+              ),
+              TextButton(
+                onPressed: () {
+                  appsCubit.pinApp(app.packageName);
+                  Navigator.pop(context);
+                },
+                child: const Text("Pin", style: TextStyle(color: ubuntuOrange)),
+              ),
+            ],
+          ),
+        );
+      },
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 5.0),
         child: Stack(
@@ -346,7 +371,10 @@ class _LomiriDockState extends State<LomiriDock> {
 
   Widget _buildPinnedApp(BuildContext context, Application app, AppsCubit appsCubit) {
     return GestureDetector(
-      onTap: () => DeviceApps.openApp(app.packageName),
+      onTap: () {
+        DeviceApps.openApp(app.packageName);
+        widget.onHide?.call();
+      },
       onLongPress: () {
         showDialog(
           context: context,
@@ -374,8 +402,8 @@ class _LomiriDockState extends State<LomiriDock> {
         padding: const EdgeInsets.symmetric(vertical: 5.0),
         child: SquircleIcon(
           icon: app is ApplicationWithIcon ? MemoryImage(app.icon) : null,
-          size: 50, // Flusher with edges
-          borderRadius: 8, // Squarish style
+          size: 50,
+          borderRadius: 8,
         ),
       ),
     );

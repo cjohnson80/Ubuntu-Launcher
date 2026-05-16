@@ -6,6 +6,7 @@ import 'package:launcher/src/config/constants/enums.dart';
 import 'package:launcher/src/data/apps_api_provider.dart';
 import 'package:launcher/src/data/models/shortcut_app_model.dart';
 import 'package:launcher/src/helpers/utilities/local_storage.dart';
+import 'package:launcher/src/helpers/utilities/system_services.dart';
 import 'package:logger/logger.dart';
 
 part 'apps_state.dart';
@@ -14,6 +15,11 @@ class AppsCubit extends Cubit<AppsState> {
   final AppsApiProvider appsApiProvider;
   AppsCubit({required this.appsApiProvider}) : super(AppsInitiateState()) {
     listenApps();
+    SystemServices.setOnAppsUpdated((apps) {
+      // Logic to update running apps in state if needed
+      // Actually, we can just trigger a loadApps or update our state manually
+      loadApps(); 
+    });
   }
 
   Future<void> loadApps() async {

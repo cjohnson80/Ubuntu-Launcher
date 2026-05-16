@@ -1,11 +1,15 @@
 package com.ubuntu.launcher
 
 import android.content.Intent
+import android.content.IntentFilter
+import android.media.AudioManager
 import android.net.Uri
+import android.os.BatteryManager
 import android.os.Build
 import android.provider.Settings
 import android.app.usage.UsageStatsManager
 import android.app.usage.UsageEvents
+import android.app.StatusBarManager
 import androidx.annotation.NonNull
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -15,11 +19,32 @@ import java.util.Calendar
 class MainActivity : FlutterActivity() {
     private val CHANNEL = "com.ubuntu.launcher/system_services"
     private var methodChannel: MethodChannel? = null
+    private val handler = android.os.Handler(android.os.Looper.getMainLooper())
+    private var lastForegroundApp: String? = null
+    
+    private val screenReceiver = object : android.content.BroadcastReceiver() {
+        override fun onReceive(context: android.content.Context?, intent: android.content.Intent?) {
+            if (intent?.action == android.content.Intent.ACTION_SCREEN_OFF) {
+                val lockIntent = android.content.Intent(context, LockScreenActivity::class.java).apply {
+                    addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+                }
+                context?.startActivity(lockIntent)
+            }
+        }
+    }
 
     override fun configureFlutterEngine(@NonNull flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         
         methodChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL)
+        
+        // Register Screen Off Receiver
+        val filter = IntentFilter(Intent.ACTION_SCREEN_OFF)
+        registerReceiver(screenReceiver, filter)
+        
+        // Start Periodic App Polling for Dock
+        startAppPolling()
+        
         methodChannel?.setMethodCallHandler { call, result ->
             when (call.method) {
                 "checkOverlayPermission" -> {
@@ -84,6 +109,105 @@ class MainActivity : FlutterActivity() {
                 "getRecentApps" -> {
                     result.success(getRecentAppsList())
                 }
+                "launchLastUsedApp" -> {
+                    val recentApps = getRecentAppsList()
+                    if (recentApps.isNotEmpty()) {
+                        val lastUsedPkg = recentApps[0]
+                        val launchIntent = packageManager.getLaunchIntentForPackage(lastUsedPkg)
+                        if (launchIntent != null) {
+                            launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
+                            startActivity(launchIntent)
+                            result.success(true)
+                        } else {
+                            result.success(false)
+                        }
+                    } else {
+                        result.success(false)
+                    }
+                }
+                "getBatteryLevel" -> {
+                    val batteryIntent = registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+                    val level = batteryIntent?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
+                    val scale = batteryIntent?.getIntExtra(BatteryManager.EXTRA_SCALE, -1) ?: -1
+                    val status = batteryIntent?.getIntExtra(BatteryManager.EXTRA_STATUS, -1) ?: -1
+                    val isCharging = status == BatteryManager.BATTERY_STATUS_CHARGING || status == BatteryManager.BATTERY_STATUS_FULL
+                    
+                    if (level == -1 || scale == -1) {
+                        result.error("UNAVAILABLE", "Battery level not available.", null)
+                    } else {
+                        val batteryPct = level * 100 / scale.toFloat()
+                        result.success(mapOf("level" to batteryPct.toInt(), "isCharging" to isCharging))
+                    }
+                }
+                "getVolume" -> {
+                    val audioManager = getSystemService(android.content.Context.AUDIO_SERVICE) as AudioManager
+                    val currentVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+                    val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+                    result.success(mapOf("current" to currentVolume, "max" to maxVolume))
+                }
+                "setVolume" -> {
+                    val volume = call.argument<Int>("volume") ?: 0
+                    val audioManager = getSystemService(android.content.Context.AUDIO_SERVICE) as AudioManager
+                    audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, volume, 0)
+                    result.success(true)
+                }
+                "openWifiSettings" -> {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        startActivity(Intent(Settings.Panel.ACTION_WIFI))
+                    } else {
+                        startActivity(Intent(Settings.ACTION_WIFI_SETTINGS))
+                    }
+                    result.success(true)
+                }
+                "openBluetoothSettings" -> {
+                    startActivity(Intent(Settings.ACTION_BLUETOOTH_SETTINGS))
+                    result.success(true)
+                }
+                "closeSystemPanels" -> {
+                    try {
+                        val statusBarService = getSystemService("statusbar")
+                        val statusBarClass = Class.forName("android.app.StatusBarManager")
+                        val method = statusBarClass.getMethod("collapsePanels")
+                        method.invoke(statusBarService)
+                        result.success(true)
+                    } catch (e: Exception) {
+                        // Fallback for newer Android versions or restricted access
+                        val it = Intent(Intent.ACTION_CLOSE_SYSTEM_DIALOGS)
+                        sendBroadcast(it)
+                        result.success(true)
+                    }
+                }
+                "closeApp" -> {
+                    val packageName = call.argument<String>("packageName")
+                    if (packageName != null) {
+                        val activityManager = getSystemService(android.content.Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+                        activityManager.killBackgroundProcesses(packageName)
+                        result.success(true)
+                    } else {
+                        result.error("INVALID_ARGUMENT", "Package name is null", null)
+                    }
+                }
+                "setAsDefaultLauncher" -> {
+                    val intent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                        Intent(Settings.ACTION_HOME_SETTINGS)
+                    } else {
+                        Intent(Settings.ACTION_SETTINGS)
+                    }
+                    startActivity(intent)
+                    result.success(true)
+                }
+                "showRecentApps" -> {
+                    try {
+                        val intent = Intent("com.android.systemui.recents.SHOW_RECENTS")
+                        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                        startActivity(intent)
+                        result.success(true)
+                    } catch (e: Exception) {
+                        // Fallback: Accessibility service or other methods are often needed for this
+                        // but we'll try a generic intent first.
+                        result.success(false)
+                    }
+                }
                 else -> {
                     result.notImplemented()
                 }
@@ -110,8 +234,12 @@ class MainActivity : FlutterActivity() {
             if (event.eventType == UsageEvents.Event.ACTIVITY_RESUMED) {
                 val pkg = event.packageName
                 if (pkg != packageName && pkg != "com.google.android.apps.nexuslauncher") {
-                    recentPackages.remove(pkg) // Remove if exists to push to front
-                    recentPackages.add(0, pkg) // Add to front of list (most recent)
+                    // Filter: Only show apps that have a launch intent (user apps/launchable services)
+                    val intent = packageManager.getLaunchIntentForPackage(pkg)
+                    if (intent != null) {
+                        recentPackages.remove(pkg) // Remove if exists to push to front
+                        recentPackages.add(0, pkg) // Add to front of list (most recent)
+                    }
                 }
             }
         }
@@ -132,8 +260,32 @@ class MainActivity : FlutterActivity() {
 
     private fun handleIntent(intent: Intent) {
         if (intent.getStringExtra("action") == "open_dock") {
-            methodChannel?.invokeMethod("openDock", null)
+            val isSidebarOnly = intent.getBooleanExtra("sidebar_only", false)
+            methodChannel?.invokeMethod("openDock", mapOf("sidebarOnly" to isSidebarOnly))
             intent.removeExtra("action") // consume it
+            intent.removeExtra("sidebar_only")
         }
+    }
+
+    private fun startAppPolling() {
+        handler.postDelayed(object : Runnable {
+            override fun run() {
+                val apps = getRecentAppsList()
+                val currentTop = if (apps.isNotEmpty()) apps[0] else null
+                
+                if (currentTop != lastForegroundApp) {
+                    lastForegroundApp = currentTop
+                    methodChannel?.invokeMethod("updateRunningApps", apps)
+                }
+                
+                handler.postDelayed(this, 1500) // Poll every 1.5s
+            }
+        }, 1500)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        unregisterReceiver(screenReceiver)
+        handler.removeCallbacksAndMessages(null)
     }
 }

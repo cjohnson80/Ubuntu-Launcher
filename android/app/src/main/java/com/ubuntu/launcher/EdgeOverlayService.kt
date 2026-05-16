@@ -114,6 +114,7 @@ class EdgeOverlayService : Service() {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
             // We can pass an extra to tell Flutter to immediately open the dock
             putExtra("action", "open_dock")
+            putExtra("sidebar_only", true)
         }
         startActivity(launchIntent)
     }
